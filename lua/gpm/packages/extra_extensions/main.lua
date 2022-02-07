@@ -2,6 +2,8 @@ local assert = assert
 local type = type
 
 local devLog = console.devLog
+local file_Exists = file.Exists
+
 local color_blue = Color( "#80A6FF" )
 
 --[[-------------------------------------------------------------------------
@@ -19,8 +21,8 @@ do
         assert( type( path ) == "string", "bad argument #1 (string expected)" )
         assert( precacheLimit > 0, "Model precache limit reached! ( > 4096 )" )
 
-        if (precached_mdls[path] == nil) and file_Exists( path ) then
-            devLog( "Model Precached -> ", color_blue, path ):setTag( "Extra Extensions" )
+        if (precached_mdls[path] == nil) and file_Exists( path, "GAME" ) then
+            devLog( "Model Precached -> ", color_blue, path ):setTag( "Extra Extensions" ):setSplit()
             precacheLimit = precacheLimit - 1
             precached_mdls[path] = true
 
@@ -49,8 +51,8 @@ do
     function util.PrecacheSound( path )
         assert( type( path ) == "string", "bad argument #1 (string expected)" )
 
-        if not path:isURL() and (precached_sounds[path] == nil) then
-            devLog( "Sound Precached -> ", color_blue, path ):setTag( "Extra Extensions" )
+        if (precached_sounds[path] == nil) and file_Exists( path, "GAME" ) then
+            devLog( "Sound Precached -> ", color_blue, path ):setTag( "Extra Extensions" ):setSplit()
             precached_sounds[path] = true
 
             if (world ~= nil) then
