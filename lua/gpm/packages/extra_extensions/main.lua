@@ -1,3 +1,5 @@
+local packageName = PKG_NAME
+
 local assert = assert
 local type = type
 
@@ -22,7 +24,7 @@ do
         assert( precacheLimit > 0, "Model precache limit reached! ( > 4096 )" )
 
         if (precached_mdls[path] == nil) and file_Exists( path, "GAME" ) then
-            devLog( "Model Precached -> ", color_blue, path ):setTag( "Extra Extensions" )
+            devLog( "Model Precached -> ", color_blue, path ):setTag( packageName )
             precacheLimit = precacheLimit - 1
             precached_mdls[path] = true
 
@@ -52,7 +54,7 @@ do
         assert( type( path ) == "string", "bad argument #1 (string expected)" )
 
         if (precached_sounds[path] == nil) and file_Exists( path, "GAME" ) then
-            devLog( "Sound Precached -> ", color_blue, path ):setTag( "Extra Extensions" )
+            devLog( "Sound Precached -> ", color_blue, path ):setTag( packageName )
             precached_sounds[path] = true
 
             if (world ~= nil) then
@@ -86,7 +88,7 @@ if SERVER then
     local team_GetClass = team.GetClass
     function PLAYER:SetNick( str )
         assert( type( str ) == "string", "bad argument #1 (string expected)" )
-        devLog( "Player (" .. self:EntIndex() .. ") New nickname -> ", team_GetClass( self:Team() ), path ):setTag( "Extra Extensions" )
+        devLog( "Player (" .. self:EntIndex() .. ") New nickname -> ", team_GetClass( self:Team() ), path ):setTag( packageName )
         self:SetNWString( "__nickname", str )
     end
 
