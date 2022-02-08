@@ -1,4 +1,4 @@
-local packageName = PKG_NAME
+local packageName = PKG["name"]
 
 local assert = assert
 local type = type
