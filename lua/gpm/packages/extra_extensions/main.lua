@@ -22,7 +22,7 @@ do
         assert( precacheLimit > 0, "Model precache limit reached! ( > 4096 )" )
 
         if (precached_mdls[path] == nil) and file_Exists( path, "GAME" ) then
-            devLog( "Model Precached -> ", color_blue, path ):setTag( "Extra Extensions" ):setSeparator()
+            devLog( "Model Precached -> ", color_blue, path ):setTag( "Extra Extensions" )
             precacheLimit = precacheLimit - 1
             precached_mdls[path] = true
 
@@ -52,7 +52,7 @@ do
         assert( type( path ) == "string", "bad argument #1 (string expected)" )
 
         if (precached_sounds[path] == nil) and file_Exists( path, "GAME" ) then
-            devLog( "Sound Precached -> ", color_blue, path ):setTag( "Extra Extensions" ):setSeparator()
+            devLog( "Sound Precached -> ", color_blue, path ):setTag( "Extra Extensions" )
             precached_sounds[path] = true
 
             if (world ~= nil) then
@@ -61,6 +61,33 @@ do
         end
 
         return util_PrecacheSound( path )
+    end
+
+end
+
+--[[-------------------------------------------------------------------------
+    Player Meta Name Extensions
+---------------------------------------------------------------------------]]
+
+local ENTITY = FindMetaTable( "Entity" )
+local PLAYER = FindMetaTable( "Player" )
+
+PLAYER["GetName"] = ENTITY["GetName"]
+PLAYER["SourceNick"] = environment.saveFunc( "PLAYER.Nick", PLAYER.Nick )
+
+function PLAYER:Nick()
+	return self:GetNWString( "__nickname", self:SourceNick() )
+end
+
+PLAYER["Name"] = PLAYER["Nick"]
+
+if SERVER then
+
+    local team_GetClass = team.GetClass
+    function PLAYER:SetNick( str )
+        assert( type( str ) == "string", "bad argument #1 (string expected)" )
+        devLog( "Player (" .. self:EntIndex() .. ") New nickname -> ", team_GetClass( self:Team() ), path ):setTag( "Extra Extensions" )
+        self:SetNWString( "__nickname", str )
     end
 
 end
