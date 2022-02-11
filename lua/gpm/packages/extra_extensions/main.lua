@@ -53,6 +53,10 @@ do
     function util.PrecacheSound( path )
         assert( type( path ) == "string", "bad argument #1 (string expected)" )
 
+        if (path == "") then
+            return path
+        end
+
         if (precached_sounds[path] == nil) and file_Exists( path, "GAME" ) then
             devLog( "Sound Precached -> ", color_blue, path ):setTag( packageName )
             precached_sounds[path] = true

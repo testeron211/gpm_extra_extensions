@@ -1,7 +1,7 @@
 return {
     name = "Extra Extensions",
     description = "Extra functionality for GLua.",
-    version = "1.0.0",
+    version = "1.0.1",
     dependencies = {
         ["Console Utils"] = ">=1.0.0",
         ["Base Extensions"] = ">=1.0.0",
