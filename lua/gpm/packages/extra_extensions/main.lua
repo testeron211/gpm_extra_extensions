@@ -1,4 +1,4 @@
-local packageName = PKG and PKG["name"]
+local packageName = "Extra Extensions"
 
 local assert = assert
 local type = type
