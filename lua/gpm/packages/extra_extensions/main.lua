@@ -63,7 +63,7 @@ if CLIENT then
             local try = _Material( "data/" .. dataPath, parameters )
             for key, value in pairs( try:GetKeyValues() ) do
                 local action = materialBuilder[ type( value ) ]
-                if (action != nil) then
+                if (action ~= nil) then
                     action( material, key, value )
                 end
             end
@@ -231,9 +231,35 @@ end
 
 PLAYER["Name"] = PLAYER["Nick"]
 
+local isDedicated = game.IsDedicated()
 if CLIENT then
+
     PLAYER["GetName"] = PLAYER["Nick"]
+
+    if game.SinglePlayer() then
+        function PLAYER:IsListenServerHost()
+            return true
+        end
+    else
+        if isDedicated then
+            function PLAYER:IsListenServerHost()
+                return false
+            end
+        else
+            function PLAYER:IsListenServerHost()
+                return self:GetNWBool( "__IsListenServerHost", false )
+            end
+        end
+    end
+
 else
+
+    if not game.SinglePlayer() and not isDedicated then
+        hook.Add("PlayerInitialSpawn", "Random Patches:IsListenServerHost", function( ply )
+            ply:SetNWBool( "__IsListenServerHost", ply:IsListenServerHost() )
+        end)
+    end
+
     PLAYER["GetName"] = ENTITY["GetName"]
 
     local team_GetColor = team.GetColor
