@@ -125,6 +125,7 @@ if CLIENT then
                             file_Write( dataPath, data )
 
                             buildMaterial( material, dataPath, parameters )
+
                             devLog("Material from `", color_blue, url, console.getColor(), "` downloaded. Saved in `data/" .. dataPath .. "`"):setTag( packageName )
                             if type( callback ) == "function" then
                                 callback( material )
