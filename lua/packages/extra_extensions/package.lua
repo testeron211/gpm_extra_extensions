@@ -1,14 +1,12 @@
-return {
-    name = "Extra Extensions",
-    description = "Extra functionality for GLua.",
-    version = "2.1.1",
-    dependencies = {
-        ["Console Utils"] = ">=1.0.0",
-        ["Base Extensions"] = ">=1.0.0",
-        ["HTTP Extensions"] = ">=1.0.0",
-        ["Environment Library"] = ">=1.0.0",
-        ["Game Ready"] = ">=1.0.0"
-    },
-    author = "PrikolMen:-b",
-    license = "MIT"
+Name = "Extra Extensions"
+Description = "Extra functionality for glua (Custom Nicknames, Player Concommand Fix, Web Material)."
+
+Author = "PrikolMen:-b"
+Version = "3.0.0"
+License = "MIT"
+
+Dependencies = {
+    ["Environment Library"] = ">=1.0.0",
+    ["Base Extensions"] = ">=2.0.0",
+    ["HTTP Extensions"] = ">=1.3.0"
 }

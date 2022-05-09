@@ -1,319 +1,338 @@
 local packageName = "Extra Extensions"
-
-if (SERVER) then
-
-    --[[-------------------------------------------------------------------------
-        ConCommand Fix
-    ---------------------------------------------------------------------------]]
-
-    do
-        util.AddNetworkString("Player@ConCommand")
-
-        local net_WriteString = net.WriteString
-        local net_Start = net.Start
-        local net_Send = net.Send
-
-        local PLAYER = FindMetaTable("Player")
-        function PLAYER:ConCommand( cmd )
-            if type( cmd ) == "string" then
-                net_Start( "Player@ConCommand" )
-                    net_WriteString( cmd )
-                net_Send( self )
-            end
-        end
-    end
-
-end
-
-if (CLIENT) then
-
-    --[[-------------------------------------------------------------------------
-        ConCommand Fix
-    ---------------------------------------------------------------------------]]
-
-    do
-        local net_ReadString = net.ReadString
-        local net_Receive = net.Receive
-
-        hook.Add("PlayerInitialized", "Player@ConCommand", function( ply )
-            net_Receive("Player@ConCommand", function()
-                ply:ConCommand( net_ReadString() )
-            end)
-        end)
-    end
-
-end
-
-local assert = assert
-local type = type
-
-local devLog = console.devLog
-local file_Exists = file.Exists
-
-local color_red = Color( "#FF4040" )
-local color_blue = Color( "#80A6FF" )
+local logger = GPM.Logger( packageName )
 
 --[[-------------------------------------------------------------------------
     Web Material
 ---------------------------------------------------------------------------]]
+do
 
-if CLIENT then
+    local material_func = environment.saveFunc( "Material", Material )
 
-    local fastBuffer = {}
-    local createMaterial = nil
+    local web_material = {}
+    web_material.__index = web_material
+
+    web_material.BaseData = {
+        ["$basetexture"] = "debugempty",
+        ["$vertexcolor"] = 1,
+        ["$realheight"] = 32,
+        ["$realwidth"] = 32,
+        ["$alpha"] = 0
+    }
+
+    -- Name
+    function web_material:GetName()
+        return self.Name or "N/A"
+    end
+
     do
-        local baseMaterialData = {
-            ["$basetexture"] = "color/white",
-            ["$vertexcolor"] = 1,
-            ["$realheight"] = 32,
-            ["$realwidth"] = 32,
-            ["$alpha"] = 0
-        }
-
         local util_CRC = util.CRC
-        local CreateMaterial = CreateMaterial
-        createMaterial = function( url, shader, materialParameters )
-            local name = "web_material_" .. util_CRC( url )
-            local material = CreateMaterial( name, type( shader ) == "string" and shader or "UnlitGeneric", type(materialParameters) == "table" and table.Merge(table.Copy(baseMaterialData), materialParameters) or baseMaterialData )
-            fastBuffer[ name ] = material
-            return material
+        function web_material:SetName( str )
+            self.Name = util_CRC( str )
         end
     end
 
-    local _Material = environment.saveFunc( "Material", Material )
-    local buildMaterial = nil
+    -- Init
     do
+        local table_Copy = table.Copy
+        function web_material:Init()
+            self.Data = table_Copy( self.BaseData )
+        end
+    end
+
+    if (CLIENT) then
+        -- Shader
+        function web_material:GetShader()
+            return self.Shader or "UnlitGeneric"
+        end
+
+        function web_material:SetShader( str )
+            self.Shader = str
+        end
+
+        -- InitMaterial
+        local CreateMaterial = CreateMaterial
+        function web_material:InitMaterial()
+            self.Material = CreateMaterial( self:GetName(), self:GetShader(), self.Data )
+        end
+    end
+
+    -- URL
+    function web_material:GetURL()
+        return self.URL
+    end
+
+    function web_material:SetURL( url )
+        self:SetName( url )
+        self.URL = url
+    end
+
+    -- Path
+    function web_material:GetPath()
+        return self.Path or self.BaseData["$basetexture"]
+    end
+
+    function web_material:SetPath( str )
+        self.Path = "data/" .. str
+    end
+
+    -- Material
+    function web_material:GetMaterial()
+        return self.Material
+    end
+
+    function web_material:SetMaterial( mat )
+        self.Material = mat
+    end
+
+    -- pngParameters
+
+    function web_material:GetPNGParameters()
+        return self.pngParameters or ""
+    end
+
+    function web_material:SetPNGParameters( str )
+        self.pngParameters = str
+    end
+
+    -- Rebuild
+    do
+
         local math_floor = math.floor
-        local materialBuilder = {
-            ["ITexture"] = function( material, key, value )
-                material:SetTexture( key, value )
+        local switch = switch
+        local pairs = pairs
+        local type = type
+
+        local server_material = "models/wireframe"
+
+        local cases = {
+            ["itexture"] = function( self, key, value )
+                self:SetTexture( key, value )
             end,
-            ["VMatrix"] = function( material, key, value )
-                material:SetMatrix( key, value )
+            ["vmatrix"] = function( self, key, value )
+                self:SetMatrix( key, value )
             end,
-            ["Vector"] = function( material, key, value )
-                material:SetVector( key, value )
+            ["vector"] = function( self, key, value )
+                self:SetVector( key, value )
             end,
-            ["number"] = function( material, key, value )
+            ["number"] = function( self, key, value )
                 if ( math_floor( value ) == value ) then
-                    material:SetInt( key, value )
+                    self:SetInt( key, value )
                 else
-                    material:SetFloat( key, value )
+                    self:SetFloat( key, value )
                 end
             end
         }
 
-        buildMaterial = function( material, dataPath, parameters )
-            local try = _Material( "data/" .. dataPath, parameters )
-            for key, value in pairs( try:GetKeyValues() ) do
-                local action = materialBuilder[ type( value ) ]
-                if (action ~= nil) then
-                    action( material, key, value )
+        function web_material:Rebuild()
+            local material = self:GetMaterial() or material_func( server_material )
+            for key, value in pairs( material_func( self:GetPath(), self:GetPNGParameters() or "" ):GetKeyValues() ) do
+                switch( type( value ):lower(), cases, material, key, value )
+            end
+        end
+
+    end
+
+    -- Download
+    do
+
+        local materials_folder = "gpm_http/materials"
+        if not file.IsDir( materials_folder, "DATA" ) then
+            file.CreateDir( materials_folder, "DATA" )
+        end
+
+        local file_Delete = file.Delete
+        local http_Download = http.Download
+
+        function web_material:Download()
+            http_Download( self:GetURL(), function( path, binary, headers )
+                self:SetPath( path )
+                local contentType = headers["Content-Type"]
+                if (binary:sub( 2, 4 ):lower() == "png" or contentType == "image/png" and "png") or (binary:sub( 7, 10 ):lower() == "jfif" or binary:sub( 7, 10 ):lower() == "exif" or contentType == "image/jpeg" and "jpg") then
+                    self:Rebuild()
+                    return
                 end
+
+                file_Delete( self:GetPath() )
+                logger:warn( "{1} is not image! Removing...", self:GetPath() )
+            end, function()
+                local material = self:GetMaterial()
+                if (material ~= nil) then
+                    material:SetInt( "$alpha", 1 )
+                end
+            end, materials_folder )
+        end
+
+    end
+
+
+    function web_material:__tostring()
+        return "Web Material [" .. self:GetName() .. "]"
+    end
+
+    local web_materials = {}
+    local setmetatable = setmetatable
+
+    function Material( materialName, pngParameters, isModelMaterial )
+        if materialName:IsURL() then
+            if (web_materials[ materialName ] == nil) then
+                local web_material = setmetatable( {}, web_material )
+                web_materials[ materialName ] = web_material
+
+                web_material:Init()
+                web_material:SetName( materialName:getFileFromURL( true ) )
+
+                if (isModelMaterial) then
+                    web_material:SetShader( "VertexLitGeneric" )
+                    web_material.Data["$model"] = 1
+                end
+
+                if (CLIENT) then
+                    web_material:InitMaterial()
+                end
+
+                web_material:SetPNGParameters( pngParameters )
+                web_material:SetURL( materialName )
+                web_material:Download()
+
+                return web_material:GetMaterial()
             end
 
-            return material
-        end
-    end
+            local web_material = web_materials[ materialName ]
+            if (pngParameters ~= web_material:GetPNGParameters()) then
+                web_material:SetPNGParameters( pngParameters )
+                web_material:Rebuild()
+            end
 
-    local materialsPath = "gpm_http/materials"
-    if not file.IsDir( materialsPath, "DATA" ) then
-        file.CreateDir( materialsPath, "DATA" )
-    end
-
-    local function getSavedMateral( url, parameters, shader, materialParameters )
-        local fastMaterial = fastBuffer[ url ]
-        if (fastMaterial != nil) then
-            return fastMaterial
+            return web_material:GetMaterial()
         end
 
-        local path = materialsPath .. "/" .. url:getFileFromURL( true )
-        if file_Exists( path, "DATA" ) then
-            return buildMaterial( createMaterial( url, shader, materialParameters ), path, parameters )
-        end
+        return material_func( materialName, pngParameters )
     end
+
+end
+
+--[[-------------------------------------------------------------------------
+    Player Meta Extensions
+---------------------------------------------------------------------------]]
+do
+
+    local PLAYER = FindMetaTable( "Player" )
+
+    --[[-------------------------------------------------------------------------
+        Player Nickname
+    ---------------------------------------------------------------------------]]
 
     do
 
-        local ismaterial = ismaterial
-        local file_Write = file.Write
-        local http_Fetch = http.Fetch
-        local game_ready_run = game_ready.wait
-        local http_isSuccess = http.isSuccess
+        -- `string` PLAYER:SourceNick() - Returns original player nickname as `string`
+        PLAYER.SourceNick = environment.saveFunc( "PLAYER.Nick", PLAYER.Nick )
 
-        function Material( url, parameters, callback, shader, materialParameters )
-            if not url:isURL() then
-                return _Material( url, parameters )
+        -- `string` PLAYER:Nick() - Returns player nickname as `string`
+        function PLAYER:Nick()
+            return self:GetNWString( "__nickname", self:SourceNick() )
+        end
+
+        -- `string` PLAYER:Name() - Returns player nickname as `string`
+        PLAYER.Name = PLAYER.Nick
+
+        -- `string` PLAYER:GetName() - On client that player nickname, on server that player mapping entity name
+        PLAYER.GetName = (CLIENT) and PLAYER.Nick or FindMetaTable( "Entity" ).GetName
+
+        -- PLAYER:SetNick( `string` nickname ) - Sets globaly player nickname
+        if (SERVER) then
+
+            local nicknames = {}
+            function PLAYER:SetNick( nickname )
+                logger:info( "Player ({1}), nickname changed: '{2}' -> '{3}'", self:EntIndex(), self:Nick(), nickname )
+                self:SetNWString( "__nickname", (nickname == nil) and self:SourceNick() or nickname )
+
+                if self:IsBot() then return end
+                nicknames[ self:SteamID64() ] = nickname
             end
 
-            local savedMaterial = getSavedMateral( url, parameters, shader, materialParameters )
-            if (savedMaterial != nil) then
-                if type( callback ) == "function" then
-                    callback( savedMaterial )
+            hook.Add("PlayerInitialSpawn", "CustomNicknames", function( ply )
+                local nickname = nicknames[ ply:SteamID64() ]
+                if (nickname ~= nil) then
+                    ply:SetNick( nickname )
                 end
-
-                return savedMaterial
-            end
-
-            local material = createMaterial( url, shader, materialParameters )
-            game_ready_run(function()
-                local filename = url:getFileFromURL( true )
-                devLog( "Started download: '", color_blue, filename, console.getColor(), "'" ):setTag( packageName )
-
-                http_Fetch( url, function( data, size, headers, code )
-                    if http_isSuccess( code ) then
-
-                        local contentType = headers["Content-Type"]
-                        if (data:sub( 2, 4 ):lower() == "png" or contentType == "image/png" and "png") or (data:sub( 7, 10 ):lower() == "jfif" or data:sub( 7, 10 ):lower() == "exif" or contentType == "image/jpeg" and "jpg") then
-                            local dataPath = materialsPath .. "/" .. filename
-                            file_Write( dataPath, data )
-
-                            buildMaterial( material, dataPath, parameters )
-
-                            devLog("Material from `", color_blue, url, console.getColor(), "` downloaded. Saved in `data/" .. dataPath .. "`"):setTag( packageName )
-                            if type( callback ) == "function" then
-                                callback( material )
-                            end
-                        else
-                            devLog( "'", color_blue, filename, console.getColor(), "' - is not an image!" ):setTag( packageName )
-                        end
-
-                    else
-                        local cColor = console.getColor()
-                        devLog( "An error code '", color_red, code, cColor, "' was received while downloading: '", color_blue, filename, cColor, "'" ):setTag( packageName )
-                    end
-                end,
-                function( err )
-                    devLog( "Failed to download image from '", color_blue, url, console.getColor(), "'. Reason: ", color_red, reason ):setTag( packageName )
-                    if ismaterial( material ) then
-                        material:SetInt( "$alpha", 1 )
-                        fastBuffer[ url ] = nil
-                    end
-                end, nil, 120 )
             end)
 
-            return material
         end
+
     end
 
-end
+    --[[-------------------------------------------------------------------------
+        PLAYER:IsListenServerHost Extension
+    ---------------------------------------------------------------------------]]
+    do
 
---[[-------------------------------------------------------------------------
-    Mdls pre-caching
----------------------------------------------------------------------------]]
+        if (CLIENT) then
 
-do
-    environment.saveFunc( "Model", Model )
-
-    local precacheLimit = 4096
-    local precached_mdls = {}
-
-    local util_PrecacheModel = util.PrecacheModel
-    function Model( path )
-        assert( type( path ) == "string", "bad argument #1 (string expected)" )
-        assert( precacheLimit > 0, "Model precache limit reached! ( > 4096 )" )
-
-        if (precached_mdls[path] == nil) and file_Exists( path, "GAME" ) then
-            devLog( "Model Precached -> ", color_blue, path ):setTag( packageName )
-            precacheLimit = precacheLimit - 1
-            precached_mdls[path] = true
-
-            util_PrecacheModel( path )
-        end
-
-        return path
-    end
-
-end
-
---[[-------------------------------------------------------------------------
-    Sounds pre-caching
----------------------------------------------------------------------------]]
-
-do
-
-    local world = nil
-    hook.Add("InitPostEntity", "Base Extensions:PrecacheSound", function()
-        world = game.GetWorld()
-    end)
-
-    local precached_sounds = {}
-    local util_PrecacheSound = environment.saveFunc( "util.PrecacheSound", util.PrecacheSound )
-
-    function util.PrecacheSound( path )
-        assert( type( path ) == "string", "bad argument #1 (string expected)" )
-
-        if (path == "") then
-            return path
-        end
-
-        if (precached_sounds[path] == nil) and file_Exists( path, "GAME" ) then
-            devLog( "Sound Precached -> ", color_blue, path ):setTag( packageName )
-            precached_sounds[path] = true
-
-            if (world ~= nil) then
-                world:EmitSound( path, 0, 100, 0 )
+            if game.SinglePlayer() then
+                function PLAYER:IsListenServerHost()
+                    return true
+                end
+            else
+                if game.IsDedicated() then
+                    function PLAYER:IsListenServerHost()
+                        return false
+                    end
+                else
+                    function PLAYER:IsListenServerHost()
+                        return self:GetNWBool( "__islistenserverhost", false )
+                    end
+                end
             end
+
         end
 
-        return util_PrecacheSound( path )
+        if (SERVER) and not game.SinglePlayer() and not game.IsDedicated() then
+            hook.Add("PlayerInitialSpawn", "IsListenServerHost", function( ply )
+                if ply:IsListenServerHost() then
+                    ply:SetNWBool( "__islistenserverhost", true )
+                    hook.Remove( "PlayerInitialSpawn", "PLAYER:IsListenServerHost()" )
+                end
+            end)
+        end
+
     end
 
-end
+    --[[-------------------------------------------------------------------------
+        PLAYER:ConCommand( `string` cmd ) F*** Rubat Fix
+    ---------------------------------------------------------------------------]]
 
---[[-------------------------------------------------------------------------
-    Player Meta Name Extensions
----------------------------------------------------------------------------]]
+    do
 
-local ENTITY = FindMetaTable( "Entity" )
-local PLAYER = FindMetaTable( "Player" )
+        local net_string = "Player@ConCommand"
 
-PLAYER["SourceNick"] = environment.saveFunc( "PLAYER.Nick", PLAYER.Nick )
+        if (SERVER) then
 
-function PLAYER:Nick()
-	return self:GetNWString( "__nickname", self:SourceNick() )
-end
+            local net_WriteString = net.WriteString
+            local net_Start = net.Start
+            local net_Send = net.Send
 
-PLAYER["Name"] = PLAYER["Nick"]
-
-local isDedicated = game.IsDedicated()
-if CLIENT then
-
-    PLAYER["GetName"] = PLAYER["Nick"]
-
-    if game.SinglePlayer() then
-        function PLAYER:IsListenServerHost()
-            return true
-        end
-    else
-        if isDedicated then
-            function PLAYER:IsListenServerHost()
-                return false
+            function PLAYER:ConCommand( cmd )
+                logger:debug( "ConCommand '{1}' runned on '{2}'", cmd, ply )
+                net_Start( net_string )
+                    net_WriteString( cmd )
+                net_Send( self )
             end
-        else
-            function PLAYER:IsListenServerHost()
-                return self:GetNWBool( "__IsListenServerHost", false )
-            end
+
         end
-    end
 
-else
+        if (CLIENT) then
 
-    if not game.SinglePlayer() and not isDedicated then
-        hook.Add("PlayerInitialSpawn", "Random Patches:IsListenServerHost", function( ply )
-            ply:SetNWBool( "__IsListenServerHost", ply:IsListenServerHost() )
-        end)
-    end
+            local net_ReadString = net.ReadString
+            local net_Receive = net.Receive
 
-    PLAYER["GetName"] = ENTITY["GetName"]
+            hook.Add("PlayerInitialized", net_string, function( ply )
+                net_Receive(net_string, function()
+                    ply:ConCommand( net_ReadString() )
+                end)
+            end)
 
-    local team_GetColor = team.GetColor
-    function PLAYER:SetNick( str )
-        assert( type( str ) == "string", "bad argument #1 (string expected)" )
-        local pColor = team_GetColor( self:Team() )
-        local cColor = console.getColor()
-        devLog( "Player (" .. self:EntIndex() .. ") Nickname changed: '", pColor, self:Nick(), cColor, "' -> '", pColor, str, cColor, "'" ):setTag( packageName )
-        self:SetNWString( "__nickname", str )
+        end
+
     end
 
 end
