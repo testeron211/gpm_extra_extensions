@@ -94,7 +94,7 @@ if CLIENT then
         local ismaterial = ismaterial
         local file_Write = file.Write
         local http_Fetch = http.Fetch
-        local game_ready_run = game_ready.run
+        local game_ready_run = game_ready.wait
         local http_isSuccess = http.isSuccess
 
         function Material( url, parameters, callback, shader, materialParameters )
