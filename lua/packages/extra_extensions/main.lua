@@ -1,5 +1,49 @@
 local packageName = "Extra Extensions"
 
+if (SERVER) then
+
+    --[[-------------------------------------------------------------------------
+        ConCommand Fix
+    ---------------------------------------------------------------------------]]
+
+    do
+        util.AddNetworkString("Player@ConCommand")
+
+        local net_WriteString = net.WriteString
+        local net_Start = net.Start
+        local net_Send = net.Send
+
+        local PLAYER = FindMetaTable("Player")
+        function PLAYER:ConCommand( cmd )
+            if type( cmd ) == "string" then
+                net_Start( "Player@ConCommand" )
+                    net_WriteString( cmd )
+                net_Send( self )
+            end
+        end
+    end
+
+end
+
+if (CLIENT) then
+
+    --[[-------------------------------------------------------------------------
+        ConCommand Fix
+    ---------------------------------------------------------------------------]]
+
+    do
+        local net_ReadString = net.ReadString
+        local net_Receive = net.Receive
+
+        hook.Add("PlayerInitialized", "Player@ConCommand", function( ply )
+            net_Receive("Player@ConCommand", function()
+                ply:ConCommand( net_ReadString() )
+            end)
+        end)
+    end
+
+end
+
 local assert = assert
 local type = type
 
