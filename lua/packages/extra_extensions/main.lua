@@ -128,6 +128,8 @@ do
             for key, value in pairs( material_func( self:GetPath(), self:GetPNGParameters() or "" ):GetKeyValues() ) do
                 switch( type( value ):lower(), cases, material, key, value )
             end
+
+            return material
         end
 
     end
@@ -140,15 +142,17 @@ do
             file.CreateDir( materials_folder, "DATA" )
         end
 
+        local pcall = pcall
         local file_Delete = file.Delete
         local http_Download = http.Download
 
-        function web_material:Download()
+        function web_material:Download( callback )
             http_Download( self:GetURL(), function( path, binary, headers )
                 self:SetPath( path )
                 local contentType = headers["Content-Type"]
                 if (binary:sub( 2, 4 ):lower() == "png" or contentType == "image/png" and "png") or (binary:sub( 7, 10 ):lower() == "jfif" or binary:sub( 7, 10 ):lower() == "exif" or contentType == "image/jpeg" and "jpg") then
-                    self:Rebuild()
+                    local material = self:Rebuild()
+                    pcall( callback, material )
                     return
                 end
 
@@ -172,7 +176,7 @@ do
     local web_materials = {}
     local setmetatable = setmetatable
 
-    function Material( materialName, pngParameters, isModelMaterial )
+    function Material( materialName, pngParameters, isModelMaterial, callback )
         if materialName:IsURL() then
             if (web_materials[ materialName ] == nil) then
                 local web_material = setmetatable( {}, web_material )
@@ -192,7 +196,7 @@ do
 
                 web_material:SetPNGParameters( pngParameters )
                 web_material:SetURL( materialName )
-                web_material:Download()
+                web_material:Download( callback )
 
                 return web_material:GetMaterial()
             end
