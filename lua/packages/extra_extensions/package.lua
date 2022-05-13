@@ -1,8 +1,8 @@
 Name = "Extra Extensions"
-Description = "Extra functionality for glua (Custom Nicknames, Player Concommand Fix, Web Material)."
+Description = "Extra functionality for glua (Web Material)."
 
 Author = "PrikolMen:-b"
-Version = "3.1.0"
+Version = "4.0.0"
 License = "MIT"
 
 Dependencies = {
