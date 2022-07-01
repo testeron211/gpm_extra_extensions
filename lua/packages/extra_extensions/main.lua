@@ -142,7 +142,6 @@ do
             file.CreateDir( materials_folder, "DATA" )
         end
 
-        local pcall = pcall
         local file_Delete = file.Delete
         local http_Download = http.Download
 
