@@ -152,7 +152,10 @@ do
                 local contentType = headers["Content-Type"]
                 if (binary:sub( 2, 4 ):lower() == "png" or contentType == "image/png" and "png") or (binary:sub( 7, 10 ):lower() == "jfif" or binary:sub( 7, 10 ):lower() == "exif" or contentType == "image/jpeg" and "jpg") then
                     local material = self:Rebuild()
-                    pcall( callback, material )
+                    if (callback) then
+                        callback( material )
+                    end
+
                     return
                 end
 

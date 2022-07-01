@@ -2,7 +2,7 @@ Name = "Extra Extensions"
 Description = "Extra functionality for glua (Web Material)."
 
 Author = "PrikolMen:-b"
-Version = "4.0.0"
+Version = "4.0.1"
 License = "MIT"
 
 Dependencies = {
