@@ -179,7 +179,7 @@ do
     local setmetatable = setmetatable
 
     function Material( materialName, pngParameters, isModelMaterial, callback )
-        if materialName:IsURL() then
+        if string.isURL( materialName ) then
             if (web_materials[ materialName ] == nil) then
                 local web_material = setmetatable( {}, web_material )
                 web_materials[ materialName ] = web_material
